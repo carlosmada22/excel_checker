@@ -1,5 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
 from pybis import Openbis
 from myapp.utils import name_checker, content_checker, entity_checker, generate_csv_and_download
 import logging
@@ -18,7 +19,7 @@ def homepage(request):
                     
                     url = f"https://devel.datastore.bam.de/"
                     o = Openbis(url)
-                    o.login("cmadaria", "psswd", save_token=True)
+                    o.login("usr", "psswd", save_token=True)
                     
                     file_name = uploaded_file.name
 
@@ -48,7 +49,7 @@ def check_instance(request):
         # Simulate fetching data from the OpenBIS instance
         url = f"https://devel.datastore.bam.de/"
         o = Openbis(url)
-        o.login("cmadaria", "Berlin.2024", save_token=True)
+        o.login("usr", "psswd", save_token=True)
 
         # Generate CSV data and capture the rows being written
         csv_rows, csv_file, masterdata = generate_csv_and_download(o, instance)
@@ -75,3 +76,31 @@ def download_csv(request, filename):
         return response
     else:
         return HttpResponse('File not found', status=404)
+    
+
+def login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # Simulate OpenBIS login
+        try:
+            url = f"https://devel.datastore.bam.de/"
+            o = Openbis(url)
+            o.login(username, password, save_token=True)
+
+            # If login is successful, save credentials to the session
+            request.session['openbis_username'] = username
+            request.session['openbis_password'] = password
+
+            # Redirect to homepage after successful login
+            return redirect('homepage')
+
+        except Exception as e:
+            # Show error if login fails
+            return render(request, 'login.html', {
+                'error': 'Login failed. Please check your username and password.'
+            })
+    
+    # If GET request, show login page
+    return render(request, 'login.html')
